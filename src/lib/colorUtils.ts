@@ -1,4 +1,3 @@
-
 // Color conversion utilities
 export function hexToHSL(hex: string): [number, number, number] {
   // Convert hex to RGB first
@@ -138,42 +137,82 @@ export function generateRandomPalette(): string[] {
   return palette;
 }
 
+// Enhanced mixColors function that considers color theory more deeply
 export function mixColors(colors: string[]): string[] {
   if (colors.length === 0) return generateRandomPalette();
-  if (colors.length === 1) return generateAnalogousPalette(colors[0]);
   
-  // For 2-3 base colors, create a palette that includes the originals and mixes between them
-  const [h1, s1, l1] = hexToHSL(colors[0]);
-  const [h2, s2, l2] = hexToHSL(colors[1]);
-  
-  const palette = [...colors];
-  
-  // Add intermediate colors
-  const mixH = (h1 + h2) / 2;
-  const mixS = (s1 + s2) / 2;
-  const mixL = (l1 + l2) / 2;
-  
-  palette.push(HSLToHex(mixH, mixS, mixL));
-  
-  if (colors.length === 3) {
-    const [h3, s3, l3] = hexToHSL(colors[2]);
-    palette.push(HSLToHex((h1 + h3) / 2, (s1 + s3) / 2, (l1 + l3) / 2));
+  // For a single color, generate an aesthetically pleasing palette
+  if (colors.length === 1) {
+    // Randomly choose between different palette types for variety
+    const paletteTypes = [
+      generateMonochromaticPalette,
+      generateAnalogousPalette,
+      generateComplementaryPalette
+    ];
+    
+    const randomPaletteGenerator = paletteTypes[Math.floor(Math.random() * paletteTypes.length)];
+    return randomPaletteGenerator(colors[0]);
   }
   
-  // Fill up to 5 colors if needed
-  while (palette.length < 5) {
-    const randomIndex = Math.floor(Math.random() * colors.length);
-    const [h, s, l] = hexToHSL(colors[randomIndex]);
+  // For 2-3 base colors, create a palette that includes the originals
+  // and intelligently generates complementary colors
+  const palette: string[] = [...colors];
+  
+  // Convert all colors to HSL for better mixing
+  const hslColors = colors.map(color => hexToHSL(color));
+  
+  // Calculate average HSL values
+  const avgH = hslColors.reduce((sum, [h]) => sum + h, 0) / hslColors.length;
+  const avgS = hslColors.reduce((sum, [, s]) => sum + s, 0) / hslColors.length;
+  const avgL = hslColors.reduce((sum, [, , l]) => sum + l, 0) / hslColors.length;
+  
+  // Add a color that complements the average
+  palette.push(HSLToHex((avgH + 180) % 360, avgS, avgL));
+  
+  // For 2 colors, add a transitional color between them
+  if (colors.length === 2) {
+    const [h1, s1, l1] = hslColors[0];
+    const [h2, s2, l2] = hslColors[1];
     
-    // Add variation of an existing color
-    const newH = (h + Math.random() * 40 - 20 + 360) % 360;
-    const newS = Math.max(0, Math.min(100, s + Math.random() * 20 - 10));
-    const newL = Math.max(10, Math.min(90, l + Math.random() * 20 - 10));
+    // Calculate the shortest path between the two hues
+    let hueDiff = (h2 - h1 + 360) % 360;
+    if (hueDiff > 180) hueDiff = hueDiff - 360;
+    
+    // Create transitional color
+    const transH = (h1 + hueDiff / 2 + 360) % 360;
+    const transS = (s1 + s2) / 2;
+    const transL = (l1 + l2) / 2;
+    
+    palette.push(HSLToHex(transH, transS, transL));
+  }
+  
+  // If we have 3 colors already, add two more to make 5
+  if (colors.length === 3) {
+    // Add a color that's complementary to the first base color
+    const [h1, s1, l1] = hslColors[0];
+    palette.push(HSLToHex((h1 + 180) % 360, s1, l1));
+    
+    // Add a color that balances all three input colors
+    // by using the triadic complement of their average
+    palette.push(HSLToHex((avgH + 120) % 360, avgS, avgL));
+  }
+  
+  // Ensure we always return exactly 5 colors
+  while (palette.length < 5) {
+    // Add variations of existing colors
+    const baseIndex = Math.floor(Math.random() * colors.length);
+    const [h, s, l] = hexToHSL(colors[baseIndex]);
+    
+    // Create a subtle variation
+    const newH = (h + (Math.random() * 40 - 20) + 360) % 360;
+    const newS = Math.max(20, Math.min(95, s + (Math.random() * 20 - 10)));
+    const newL = Math.max(20, Math.min(80, l + (Math.random() * 30 - 15)));
     
     palette.push(HSLToHex(newH, newS, newL));
   }
   
-  return palette;
+  // If we somehow got more than 5 colors, trim the excess
+  return palette.slice(0, 5);
 }
 
 // Palette naming
@@ -195,4 +234,51 @@ export function generatePaletteName(): string {
   const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const noun = nouns[Math.floor(Math.random() * nouns.length)];
   return `${adjective} ${noun}`;
+}
+
+// Additional utility function to get color name
+export function getColorName(hex: string): string {
+  // This is a simple implementation
+  // A more sophisticated version would use a color names database
+  
+  const [h, s, l] = hexToHSL(hex);
+  
+  // Define hue ranges for basic color names
+  const hueRanges = [
+    { name: "Red", min: 355, max: 10 },
+    { name: "Orange", min: 11, max: 40 },
+    { name: "Yellow", min: 41, max: 70 },
+    { name: "Green", min: 71, max: 150 },
+    { name: "Cyan", min: 151, max: 200 },
+    { name: "Blue", min: 201, max: 260 },
+    { name: "Purple", min: 261, max: 320 },
+    { name: "Pink", min: 321, max: 354 }
+  ];
+  
+  // Find the color name based on hue
+  let colorName = "Gray"; // Default
+  
+  // If it's very dark or very light or not saturated, it's a neutral
+  if (l < 10) return "Black";
+  if (l > 90 && s < 15) return "White";
+  if (s < 15) return l < 50 ? "Dark Gray" : "Light Gray";
+  
+  // Find the matching hue range
+  for (const range of hueRanges) {
+    if ((range.min <= h && h <= range.max) || 
+        (range.name === "Red" && (h >= 355 || h <= 10))) {
+      colorName = range.name;
+      
+      // Add modifiers based on saturation and lightness
+      if (s < 40) colorName = "Muted " + colorName;
+      else if (s > 80) colorName = "Vibrant " + colorName;
+      
+      if (l < 30) colorName = "Dark " + colorName;
+      else if (l > 70) colorName = "Light " + colorName;
+      
+      break;
+    }
+  }
+  
+  return colorName;
 }
