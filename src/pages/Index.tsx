@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ColorPicker } from "@/components/ColorPicker";
@@ -17,6 +18,12 @@ interface Palette {
   colors: string[];
 }
 
+// Local storage keys
+const STORAGE_KEYS = {
+  PALETTES: "hueforge-palettes",
+  BASE_COLORS: "hueforge-base-colors"
+};
+
 // Function to download data as a file
 function downloadFile(data: string, filename: string, type: string) {
   const file = new Blob([data], { type });
@@ -29,21 +36,43 @@ function downloadFile(data: string, filename: string, type: string) {
 }
 
 const Index = () => {
-  const [baseColors, setBaseColors] = useState(["#6366F1"]);
+  // Load base colors from local storage or use default
+  const [baseColors, setBaseColors] = useState<string[]>(() => {
+    const savedBaseColors = localStorage.getItem(STORAGE_KEYS.BASE_COLORS);
+    return savedBaseColors ? JSON.parse(savedBaseColors) : ["#6366F1"];
+  });
+
   const [currentPalette, setCurrentPalette] = useState<Palette>({
     id: uuidv4(),
     name: generatePaletteName(),
     colors: ["#6366F1", "#8B5CF6", "#A78BFA", "#C4B5FD", "#EDE9FE"]
   });
   const [lockedColors, setLockedColors] = useState<boolean[]>(Array(5).fill(false));
-  const [paletteHistory, setPaletteHistory] = useState<Palette[]>([]);
+  
+  // Load palette history from local storage or initialize empty
+  const [paletteHistory, setPaletteHistory] = useState<Palette[]>(() => {
+    const savedPalettes = localStorage.getItem(STORAGE_KEYS.PALETTES);
+    return savedPalettes ? JSON.parse(savedPalettes) : [];
+  });
   
   const paletteRef = useRef<HTMLDivElement>(null);
 
   // Initialize with a palette
   useEffect(() => {
-    regeneratePalette();
+    if (paletteHistory.length === 0) {
+      regeneratePalette();
+    }
   }, []);
+
+  // Save base colors to local storage when they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BASE_COLORS, JSON.stringify(baseColors));
+  }, [baseColors]);
+
+  // Save palette history to local storage when it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PALETTES, JSON.stringify(paletteHistory));
+  }, [paletteHistory]);
 
   // Add current palette to history when it changes
   useEffect(() => {
@@ -145,6 +174,13 @@ const Index = () => {
     setLockedColors(Array(palette.colors.length).fill(false));
   };
 
+  // Clear history function
+  const handleClearHistory = () => {
+    setPaletteHistory([]);
+    localStorage.removeItem(STORAGE_KEYS.PALETTES);
+    toast.success("Palette history cleared");
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-10 backdrop-blur-sm bg-background/80 border-b">
@@ -198,6 +234,7 @@ const Index = () => {
           palettes={paletteHistory} 
           onSelect={handleSelectFromHistory}
           currentPaletteId={currentPalette.id}
+          onClearHistory={handleClearHistory}
         />
         
         <div className="bg-card rounded-lg shadow-sm p-6">

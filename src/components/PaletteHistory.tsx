@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { 
   ChevronDown,
   ChevronUp, 
-  History
+  History,
+  Trash2
 } from "lucide-react";
 import { 
   Collapsible,
@@ -22,16 +23,18 @@ interface PaletteHistoryProps {
   palettes: Palette[];
   onSelect: (palette: Palette) => void;
   currentPaletteId: string;
+  onClearHistory?: () => void;
 }
 
 export function PaletteHistory({ 
   palettes, 
   onSelect,
-  currentPaletteId 
+  currentPaletteId,
+  onClearHistory
 }: PaletteHistoryProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (palettes.length <= 1) return null;
+  if (palettes.length <= 0) return null;
 
   return (
     <Collapsible
@@ -43,12 +46,25 @@ export function PaletteHistory({
         <div className="flex items-center gap-2">
           <History className="h-5 w-5" />
           <h3 className="font-medium">Palette History</h3>
+          <span className="text-xs text-muted-foreground">({palettes.length})</span>
         </div>
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" size="sm">
-            {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-        </CollapsibleTrigger>
+        <div className="flex items-center gap-2">
+          {onClearHistory && palettes.length > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={onClearHistory}
+              title="Clear history"
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+            </Button>
+          )}
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm">
+              {isOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+        </div>
       </div>
       
       <CollapsibleContent className="mt-4">
