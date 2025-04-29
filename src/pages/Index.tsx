@@ -7,10 +7,11 @@ import { PaletteDisplay } from "@/components/PaletteDisplay";
 import { PaletteHistory } from "@/components/PaletteHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { generatePaletteName, mixColors } from "@/lib/colorUtils";
 import html2canvas from "html2canvas";
 import { v4 as uuidv4 } from "uuid";
+import { Link } from "react-router-dom";
 
 interface Palette {
   id: string;
@@ -185,7 +186,14 @@ const Index = () => {
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-10 backdrop-blur-sm bg-background/80 border-b">
         <div className="container flex items-center justify-between py-4">
-          <h1 className="text-2xl font-bold">HueForge Palette</h1>
+          <div className="flex items-center gap-2">
+            <Link to="/" className="mr-2">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
+            <h1 className="text-2xl font-bold">HueForge Palette</h1>
+          </div>
           <ThemeToggle />
         </div>
       </header>
@@ -223,7 +231,7 @@ const Index = () => {
           <div className="mt-4">
             <Button 
               onClick={regeneratePalette}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 transition-all hover:scale-105"
             >
               Generate Palette
             </Button>
@@ -237,7 +245,7 @@ const Index = () => {
           onClearHistory={handleClearHistory}
         />
         
-        <div className="bg-card rounded-lg shadow-sm p-6">
+        <div className="bg-card rounded-lg shadow-sm p-6 border border-border/50 backdrop-blur-sm hover:shadow-md transition-all">
           <PaletteControls
             paletteName={currentPalette.name}
             onRegenerate={regeneratePalette}
