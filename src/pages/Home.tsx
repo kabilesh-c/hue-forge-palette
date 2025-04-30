@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -189,11 +190,18 @@ export default function Home() {
     setLockedColors(Array(palette.colors.length).fill(false));
   };
 
-  // Clear history function
   const handleClearHistory = () => {
     setPaletteHistory([]);
     localStorage.removeItem(STORAGE_KEYS.PALETTES);
     toast.success("Palette history cleared");
+  };
+
+  const handleReorderColors = (newOrder: string[], newLockedOrder: boolean[]) => {
+    setCurrentPalette({
+      ...currentPalette,
+      colors: newOrder
+    });
+    setLockedColors(newLockedOrder);
   };
 
   return (
@@ -213,9 +221,9 @@ export default function Home() {
       <main className="flex-grow">
         {/* Hero Section */}
         <section 
-          className="relative py-20 overflow-hidden" 
+          className="relative py-20 overflow-hidden"
           style={{
-            background: `linear-gradient(${backgroundPosition}, #e6b980, #eacda3, #d299c2, #fef9d7, #accbee)`,
+            backgroundImage: `linear-gradient(${backgroundPosition}, #e6b980, #eacda3, #d299c2, #fef9d7, #accbee)`,
             backgroundSize: "400% 400%"
           }}
         >
@@ -302,6 +310,7 @@ export default function Home() {
                     colors={currentPalette.colors}
                     lockedColors={lockedColors}
                     onToggleLock={handleToggleLock}
+                    onReorderColors={handleReorderColors}
                   />
                 </div>
               </div>
