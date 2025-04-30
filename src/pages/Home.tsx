@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -237,7 +238,7 @@ export default function Home() {
               className="group text-lg px-8 py-6 transition-all hover:scale-105 bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30"
               onClick={() => setShowPalette(!showPalette)}
             >
-              Let's Craft
+              {showPalette ? "Hide Palette" : "Let's Craft"}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
             
@@ -288,12 +289,14 @@ export default function Home() {
                 </div>
               </div>
               
-              <PaletteHistory 
-                palettes={paletteHistory} 
-                onSelect={handleSelectFromHistory}
-                currentPaletteId={currentPalette.id}
-                onClearHistory={handleClearHistory}
-              />
+              {paletteHistory.length > 0 && (
+                <PaletteHistory 
+                  palettes={paletteHistory} 
+                  onSelect={handleSelectFromHistory}
+                  currentPaletteId={currentPalette.id}
+                  onClearHistory={handleClearHistory}
+                />
+              )}
               
               <div className="bg-card rounded-lg shadow-sm p-6 border border-border/50 backdrop-blur-sm hover:shadow-md transition-all">
                 <PaletteControls
