@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -38,7 +37,6 @@ function downloadFile(data: string, filename: string, type: string) {
 export default function Home() {
   const [showPalette, setShowPalette] = useState(false);
   const [backgroundPosition, setBackgroundPosition] = useState("0% 0%");
-  const navigate = useRef(null);
 
   // Animated background effect
   useEffect(() => {
@@ -98,7 +96,7 @@ export default function Home() {
         setPaletteHistory(prev => [currentPalette, ...prev].slice(0, 10));
       }
     }
-  }, [currentPalette]);
+  }, [currentPalette, paletteHistory]);
 
   const regeneratePalette = () => {
     const newColors = mixColors(baseColors);
