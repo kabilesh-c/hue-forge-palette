@@ -1,13 +1,43 @@
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, Palette, Copy, Download, Github } from "lucide-react";
+import { ArrowRight, Palette, Copy, Download, Github, ChevronDown, ChevronUp } from "lucide-react";
+import { toast } from "sonner";
+import { ColorPicker } from "@/components/ColorPicker";
+import { PaletteControls } from "@/components/PaletteControls";
+import { PaletteDisplay } from "@/components/PaletteDisplay";
+import { PaletteHistory } from "@/components/PaletteHistory";
+import { generatePaletteName, mixColors } from "@/lib/colorUtils";
+import html2canvas from "html2canvas";
+import { v4 as uuidv4 } from "uuid";
+
+interface Palette {
+  id: string;
+  name: string;
+  colors: string[];
+}
+
+// Local storage keys
+const STORAGE_KEYS = {
+  PALETTES: "hueforge-palettes",
+  BASE_COLORS: "hueforge-base-colors"
+};
+
+// Function to download data as a file
+function downloadFile(data: string, filename: string, type: string) {
+  const file = new Blob([data], { type });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(file);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
 
 export default function Home() {
-  const navigate = useNavigate();
+  const [showPalette, setShowPalette] = useState(false);
   const [backgroundPosition, setBackgroundPosition] = useState("0% 0%");
+  const navigate = useRef(null);
 
   // Animated background effect
   useEffect(() => {
@@ -20,6 +50,151 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Load base colors from local storage or use default
+  const [baseColors, setBaseColors] = useState<string[]>(() => {
+    const savedBaseColors = localStorage.getItem(STORAGE_KEYS.BASE_COLORS);
+    return savedBaseColors ? JSON.parse(savedBaseColors) : ["#6366F1"];
+  });
+
+  const [currentPalette, setCurrentPalette] = useState<Palette>({
+    id: uuidv4(),
+    name: generatePaletteName(),
+    colors: ["#6366F1", "#8B5CF6", "#A78BFA", "#C4B5FD", "#EDE9FE"]
+  });
+  const [lockedColors, setLockedColors] = useState<boolean[]>(Array(5).fill(false));
+  
+  // Load palette history from local storage or initialize empty
+  const [paletteHistory, setPaletteHistory] = useState<Palette[]>(() => {
+    const savedPalettes = localStorage.getItem(STORAGE_KEYS.PALETTES);
+    return savedPalettes ? JSON.parse(savedPalettes) : [];
+  });
+  
+  const paletteRef = useRef<HTMLDivElement>(null);
+
+  // Initialize with a palette
+  useEffect(() => {
+    if (paletteHistory.length === 0) {
+      regeneratePalette();
+    }
+  }, []);
+
+  // Save base colors to local storage when they change
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BASE_COLORS, JSON.stringify(baseColors));
+  }, [baseColors]);
+
+  // Save palette history to local storage when it changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PALETTES, JSON.stringify(paletteHistory));
+  }, [paletteHistory]);
+
+  // Add current palette to history when it changes
+  useEffect(() => {
+    if (currentPalette.colors.length > 0) {
+      // Only add to history if it's not already there
+      if (!paletteHistory.some(p => p.id === currentPalette.id)) {
+        setPaletteHistory(prev => [currentPalette, ...prev].slice(0, 10));
+      }
+    }
+  }, [currentPalette]);
+
+  const regeneratePalette = () => {
+    const newColors = mixColors(baseColors);
+    const updatedColors = currentPalette.colors.map((color, index) => {
+      return lockedColors[index] ? color : newColors[index];
+    });
+
+    setCurrentPalette({
+      id: uuidv4(),
+      name: generatePaletteName(),
+      colors: updatedColors
+    });
+  };
+
+  const handleToggleLock = (index: number) => {
+    setLockedColors(prev => {
+      const updated = [...prev];
+      updated[index] = !updated[index];
+      return updated;
+    });
+  };
+
+  const handleAddBaseColor = () => {
+    if (baseColors.length < 3) {
+      // Generate a random color if we've added 2+ colors already
+      // Otherwise use a complementary color to the first one
+      const newColor = baseColors.length >= 2
+        ? `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`
+        : `#${(parseInt(baseColors[0].slice(1), 16) ^ 0xFFFFFF).toString(16).padStart(6, '0')}`;
+      
+      setBaseColors([...baseColors, newColor]);
+    } else {
+      toast.error("Maximum 3 base colors allowed");
+    }
+  };
+
+  const handleRemoveBaseColor = (index: number) => {
+    if (baseColors.length > 1) {
+      const newColors = [...baseColors];
+      newColors.splice(index, 1);
+      setBaseColors(newColors);
+    } else {
+      toast.error("At least one base color is required");
+    }
+  };
+
+  const handleExportPNG = async () => {
+    if (paletteRef.current) {
+      try {
+        const canvas = await html2canvas(paletteRef.current, {
+          backgroundColor: null,
+          scale: 2
+        });
+        
+        const dataUrl = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = dataUrl;
+        a.download = `${currentPalette.name.replace(/\s+/g, "-").toLowerCase()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        toast.success("Palette exported as PNG");
+      } catch (error) {
+        console.error("Error exporting PNG:", error);
+        toast.error("Failed to export as PNG");
+      }
+    }
+  };
+
+  const handleExportJSON = () => {
+    const data = {
+      name: currentPalette.name,
+      colors: currentPalette.colors,
+      timestamp: new Date().toISOString()
+    };
+    
+    downloadFile(
+      JSON.stringify(data, null, 2),
+      `${currentPalette.name.replace(/\s+/g, "-").toLowerCase()}.json`,
+      "application/json"
+    );
+    
+    toast.success("Palette exported as JSON");
+  };
+  
+  const handleSelectFromHistory = (palette: Palette) => {
+    setCurrentPalette(palette);
+    setLockedColors(Array(palette.colors.length).fill(false));
+  };
+
+  // Clear history function
+  const handleClearHistory = () => {
+    setPaletteHistory([]);
+    localStorage.removeItem(STORAGE_KEYS.PALETTES);
+    toast.success("Palette history cleared");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
@@ -54,9 +229,9 @@ export default function Home() {
             <Button 
               size="lg" 
               className="group text-lg px-8 py-6 transition-all hover:scale-105 bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30"
-              onClick={() => navigate('/palette')}
+              onClick={() => setShowPalette(!showPalette)}
             >
-              Launch HueForge
+              Let's Craft
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </Button>
             
@@ -64,43 +239,115 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features Preview */}
-        <section className="py-16 bg-background">
-          <div className="container px-4">
-            <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-border/50 backdrop-blur-sm">
-                <div className="h-12 w-12 flex items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-                  <Palette className="h-6 w-6" />
+        {/* Palette Generator Section */}
+        {showPalette && (
+          <section className="py-12 bg-background">
+            <div className="container">
+              <div className="mb-8">
+                <h2 className="text-lg font-medium mb-4">Base Colors</h2>
+                
+                <div className="flex flex-wrap items-center gap-4">
+                  {baseColors.map((color, index) => (
+                    <ColorPicker
+                      key={index}
+                      color={color}
+                      onChange={(newColor) => {
+                        const newColors = [...baseColors];
+                        newColors[index] = newColor;
+                        setBaseColors(newColors);
+                      }}
+                      onRemove={() => handleRemoveBaseColor(index)}
+                      canRemove={baseColors.length > 1}
+                    />
+                  ))}
+                  
+                  {baseColors.length < 3 && (
+                    <Button 
+                      variant="outline" 
+                      className="w-20 h-20 border-dashed"
+                      onClick={handleAddBaseColor}
+                    >
+                      <ArrowRight size={24} />
+                    </Button>
+                  )}
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Pick and Customize Colors</h3>
-                <p className="text-muted-foreground">
-                  Select up to three base colors and generate beautiful, harmonious palettes with a single click.
-                </p>
+                
+                <div className="mt-4">
+                  <Button 
+                    onClick={regeneratePalette}
+                    className="bg-primary hover:bg-primary/90 transition-all hover:scale-105"
+                  >
+                    Generate Palette
+                  </Button>
+                </div>
               </div>
               
-              <div className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-border/50 backdrop-blur-sm">
-                <div className="h-12 w-12 flex items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-                  <Copy className="h-6 w-6" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">Save and Manage Palettes</h3>
-                <p className="text-muted-foreground">
-                  Lock colors you love, regenerate others, and keep a history of your favorite palettes locally.
-                </p>
-              </div>
+              <PaletteHistory 
+                palettes={paletteHistory} 
+                onSelect={handleSelectFromHistory}
+                currentPaletteId={currentPalette.id}
+                onClearHistory={handleClearHistory}
+              />
               
-              <div className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-border/50 backdrop-blur-sm">
-                <div className="h-12 w-12 flex items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
-                  <Download className="h-6 w-6" />
+              <div className="bg-card rounded-lg shadow-sm p-6 border border-border/50 backdrop-blur-sm hover:shadow-md transition-all">
+                <PaletteControls
+                  paletteName={currentPalette.name}
+                  onRegenerate={regeneratePalette}
+                  onExportPNG={handleExportPNG}
+                  onExportJSON={handleExportJSON}
+                />
+                
+                <div ref={paletteRef}>
+                  <PaletteDisplay
+                    colors={currentPalette.colors}
+                    lockedColors={lockedColors}
+                    onToggleLock={handleToggleLock}
+                  />
                 </div>
-                <h3 className="text-xl font-semibold mb-2">Instant Copy & Export</h3>
-                <p className="text-muted-foreground">
-                  Export your palettes as PNG or JSON with one click, or copy individual color codes instantly.
-                </p>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
+
+        {/* Features Preview (only shown when palette is hidden) */}
+        {!showPalette && (
+          <section className="py-16 bg-background">
+            <div className="container px-4">
+              <h2 className="text-3xl font-bold text-center mb-12">Features</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-border/50 backdrop-blur-sm">
+                  <div className="h-12 w-12 flex items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                    <Palette className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Pick and Customize Colors</h3>
+                  <p className="text-muted-foreground">
+                    Select up to three base colors and generate beautiful, harmonious palettes with a single click.
+                  </p>
+                </div>
+                
+                <div className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-border/50 backdrop-blur-sm">
+                  <div className="h-12 w-12 flex items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                    <Copy className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Save and Manage Palettes</h3>
+                  <p className="text-muted-foreground">
+                    Lock colors you love, regenerate others, and keep a history of your favorite palettes locally.
+                  </p>
+                </div>
+                
+                <div className="bg-card rounded-xl p-6 shadow-sm hover:shadow-md transition-all hover:-translate-y-1 border border-border/50 backdrop-blur-sm">
+                  <div className="h-12 w-12 flex items-center justify-center rounded-full bg-primary/10 text-primary mb-4">
+                    <Download className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Instant Copy & Export</h3>
+                  <p className="text-muted-foreground">
+                    Export your palettes as PNG or JSON with one click, or copy individual color codes instantly.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Why Use HueForge */}
         <section className="py-16 bg-secondary/50">

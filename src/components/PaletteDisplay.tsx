@@ -1,26 +1,32 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ColorSwatch } from "./ColorSwatch";
 
 interface PaletteDisplayProps {
   colors: string[];
   lockedColors: boolean[];
   onToggleLock: (index: number) => void;
+  onReorderColors?: (newOrder: string[], newLockedOrder: boolean[]) => void;
 }
 
-export function PaletteDisplay({ colors, lockedColors, onToggleLock }: PaletteDisplayProps) {
+export function PaletteDisplay({ 
+  colors, 
+  lockedColors, 
+  onToggleLock,
+  onReorderColors
+}: PaletteDisplayProps) {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [colorsList, setColorsList] = useState<string[]>(colors);
   const [lockedList, setLockedList] = useState<boolean[]>(lockedColors);
 
   // Update local state when props change
-  if (JSON.stringify(colorsList) !== JSON.stringify(colors)) {
+  useEffect(() => {
     setColorsList(colors);
-  }
+  }, [colors]);
 
-  if (JSON.stringify(lockedList) !== JSON.stringify(lockedColors)) {
+  useEffect(() => {
     setLockedList(lockedColors);
-  }
+  }, [lockedColors]);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -56,9 +62,11 @@ export function PaletteDisplay({ colors, lockedColors, onToggleLock }: PaletteDi
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
-    // Here we would update the parent state to reflect the new order
-    // But since we would need to add a callback prop from the parent, 
-    // we'll leave this as a visual-only reordering for now
+    
+    // Update the parent state with the new order
+    if (onReorderColors) {
+      onReorderColors(colorsList, lockedList);
+    }
   };
 
   return (
