@@ -38,6 +38,8 @@ function downloadFile(data: string, filename: string, type: string) {
 export default function Home() {
   const [showPalette, setShowPalette] = useState(false);
   const [backgroundPosition, setBackgroundPosition] = useState("0% 0%");
+  const paletteRef = useRef<HTMLDivElement>(null);
+  const paletteSection = useRef<HTMLElement>(null);
 
   // Animated background effect
   useEffect(() => {
@@ -69,8 +71,6 @@ export default function Home() {
     const savedPalettes = localStorage.getItem(STORAGE_KEYS.PALETTES);
     return savedPalettes ? JSON.parse(savedPalettes) : [];
   });
-  
-  const paletteRef = useRef<HTMLDivElement>(null);
 
   // Initialize with a palette
   useEffect(() => {
@@ -98,6 +98,13 @@ export default function Home() {
       }
     }
   }, [currentPalette, paletteHistory]);
+
+  // Scroll to palette section when showPalette changes to true
+  useEffect(() => {
+    if (showPalette && paletteSection.current) {
+      paletteSection.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [showPalette]);
 
   const regeneratePalette = () => {
     const newColors = mixColors(baseColors);
@@ -236,7 +243,9 @@ export default function Home() {
             <Button 
               size="lg" 
               className="group text-lg px-8 py-6 transition-all hover:scale-105 bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30"
-              onClick={() => setShowPalette(!showPalette)}
+              onClick={() => {
+                setShowPalette(!showPalette);
+              }}
             >
               {showPalette ? "Hide Palette" : "Let's Craft"}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
@@ -248,7 +257,7 @@ export default function Home() {
 
         {/* Palette Generator Section */}
         {showPalette && (
-          <section className="py-12 bg-background">
+          <section ref={paletteSection} className="py-12 bg-background" id="palette-section">
             <div className="container">
               <div className="mb-8">
                 <h2 className="text-lg font-medium mb-4">Base Colors</h2>
