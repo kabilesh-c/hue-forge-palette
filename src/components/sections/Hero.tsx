@@ -42,10 +42,10 @@ export function Hero({ showPalette, setShowPalette }: HeroProps) {
           size="lg" 
           className="group text-lg px-8 py-6 transition-all hover:scale-105 bg-white/20 backdrop-blur-md border border-white/30 hover:bg-white/30"
           onClick={() => {
-            setShowPalette(!showPalette);
+            setShowPalette(true);
           }}
         >
-          {showPalette ? "Hide Palette" : "Let's Craft"}
+          Let's Craft
           <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
         </Button>
         

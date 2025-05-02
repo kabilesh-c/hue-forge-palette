@@ -157,7 +157,6 @@ export function PaletteGenerator({ paletteSection }: PaletteGeneratorProps) {
     a.download = `${currentPalette.name.replace(/\s+/g, "-").toLowerCase()}.json`;
     document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
     
     toast.success("Palette exported as JSON");
   };

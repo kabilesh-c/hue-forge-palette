@@ -1,5 +1,5 @@
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Hero } from "@/components/sections/Hero";
 import { Features } from "@/components/sections/Features";
 import { WhySection } from "@/components/sections/WhySection";
@@ -12,11 +12,18 @@ export default function Home() {
   const [showPalette, setShowPalette] = useState(false);
   const paletteSection = useRef<HTMLElement>(null);
 
+  // Handle smooth scrolling to palette section when showPalette changes
+  useEffect(() => {
+    if (showPalette && paletteSection.current) {
+      paletteSection.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [showPalette]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       <header className="sticky top-0 z-10 backdrop-blur-sm bg-background/80 border-b">
         <div className="container flex items-center justify-between py-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowPalette(false)}>
             <Palette className="h-6 w-6 text-primary" />
             <h1 className="text-xl font-bold">
               Hue<span className="text-primary">Forge</span>
@@ -37,7 +44,7 @@ export default function Home() {
         {!showPalette && <Features />}
 
         {/* Why Use HueForge */}
-        <WhySection />
+        {!showPalette && <WhySection />}
       </main>
       
       <Footer />

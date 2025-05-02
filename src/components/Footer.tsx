@@ -7,10 +7,10 @@ export function Footer() {
       <div className="container">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
-            HueForge Palette Generator — Create beautiful color palettes with ease.
+            HueForge Palette Generator — Create beautiful color palettes with ease. © {new Date().getFullYear()}
           </div>
           <div className="flex items-center gap-6">
-            <a href="#about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               About
             </a>
             <a 
@@ -22,7 +22,7 @@ export function Footer() {
               <Github className="h-4 w-4" />
               GitHub
             </a>
-            <a href="#credits" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <a href="#" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
               Credits
             </a>
           </div>
